@@ -42,7 +42,7 @@ func InitBlockChain() *BlockChain {
 			item, err := txn.Get([]byte("lh"))
 			HandleErr(err)
 			err = item.Value(func(val []byte) error {
-				fmt.Printf("Got value: %s \n", val)
+				fmt.Printf("Got value: %s \n", string(val))
 				lastHash = append([]byte{}, val...)
 				return nil
 			})
@@ -63,7 +63,7 @@ func (chain *BlockChain) AddBlock(data string) {
 		item, err := txn.Get([]byte("lh"))
 		HandleErr(err)
 		err = item.Value(func(val []byte) error {
-			fmt.Printf("Got value: %s", val)
+			fmt.Printf("Got value: %s", string(val))
 			lastHash = append([]byte{}, val...)
 			return nil
 		})
