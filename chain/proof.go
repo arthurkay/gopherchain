@@ -7,9 +7,20 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
+	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
-const Difficulty = 18
+var Difficulty int
+
+func init() {
+	godotenv.Load()
+	level, err := strconv.Atoi(os.Getenv("DIFFICULTY"))
+	HandleErr(err)
+	Difficulty = level
+}
 
 type ProofOfWork struct {
 	Block  *Block
