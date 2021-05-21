@@ -7,11 +7,18 @@ import (
 	"runtime"
 
 	"github.com/dgraph-io/badger/v3"
+	"github.com/joho/godotenv"
 )
 
+func init() {
+	godotenv.Load()
+	dbPath = os.Getenv("DB_PATH")
+	dbFile = os.Getenv("DB_FILE")
+}
+
 var (
-	dbPath      = os.Getenv("DB_PATH")
-	dbFile      = os.Getenv("DB_FILE")
+	dbPath      string
+	dbFile      string
 	genesisData = "The gopherchain is born"
 )
 
