@@ -18,7 +18,7 @@ func (cli *CommandLine) printUsage() {
 	fmt.Println(" createblockchain --address ADDRES creates a blockchain")
 	fmt.Println(" add --block BLOCK_DATA - Adds a block to the blockchain")
 	fmt.Println(" print - Prints the blocks in the chain")
-	fmt.Println("send --from FROM --to TO --amount AMOUNT Send money from FROM to TO")
+	fmt.Println(" send --from FROM --to TO --amount AMOUNT Send money from FROM to TO")
 }
 
 func (cli *CommandLine) printChain() {

@@ -9,9 +9,9 @@ import (
 	"github.com/dgraph-io/badger/v3"
 )
 
-const (
-	dbPath      = "./tmp/blocks"
-	dbFile      = "./tmp/blocks/MANIFEST"
+var (
+	dbPath      = os.Getenv("DB_PATH")
+	dbFile      = os.Getenv("DB_FILE")
 	genesisData = "The gopherchain is born"
 )
 
@@ -33,7 +33,7 @@ func DBExists() bool {
 }
 
 func ContinueBlockChain(address string) *BlockChain {
-	if DBExists() == false {
+	if !DBExists() {
 		fmt.Println("No already existing gopherchain found, creating one")
 		runtime.Goexit()
 	}
@@ -87,7 +87,7 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []Transaction {
 				}
 			}
 
-			if tx.IsCoinBase() == false {
+			if !tx.IsCoinBase() {
 				for _, in := range tx.Inputs {
 					if in.CanUnlock(address) {
 						inTxID := hex.EncodeToString(in.ID)
@@ -143,7 +143,7 @@ func InitBlockChain(address string) *BlockChain {
 	var lastHash []byte
 
 	if DBExists() {
-		fmt.Println("gopherchain has a db file on thos machine")
+		fmt.Println("gopherchain has a db file on this machine")
 		runtime.Goexit()
 	}
 	opts := badger.DefaultOptions(dbPath)
