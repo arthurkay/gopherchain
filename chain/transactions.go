@@ -8,23 +8,29 @@ import (
 	"fmt"
 )
 
+// Transaction a layout of the transaction structure
 type Transaction struct {
 	ID      []byte
 	Inputs  []TxInput
 	Outputs []TxOutput
 }
 
+// TxOuput lays out the
+// out going transaction data
 type TxOutput struct {
 	Value  int
 	PubKey string
 }
 
+// TxInput is an object of the
+// incoming transaction details
 type TxInput struct {
 	ID  []byte
 	Out int
 	Sig string
 }
 
+// SetID creates a transactional ID
 func (tx *Transaction) SetID() {
 	var encoded bytes.Buffer
 	var hash [32]byte
@@ -37,6 +43,8 @@ func (tx *Transaction) SetID() {
 	tx.ID = hash[:]
 }
 
+// CoinBaseTo takse in an address and data to make a
+// transaction. This function also returns a transaction pointer
 func CoinBaseTx(to, data string) *Transaction {
 	if data == "" {
 		data = fmt.Sprintf("Coin to %s", to)
@@ -51,6 +59,7 @@ func CoinBaseTx(to, data string) *Transaction {
 	return &tx
 }
 
+// IsCoinBase checks if a transaction is coin based
 func (tx *Transaction) IsCoinBase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].ID) == 0 && tx.Inputs[0].Out == -1
 }
