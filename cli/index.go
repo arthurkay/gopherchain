@@ -102,7 +102,7 @@ func (cli *CommandLine) Run() {
 			log.Panic(err)
 		}
 
-	case "printchain":
+	case "print":
 		err := printChainCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)
