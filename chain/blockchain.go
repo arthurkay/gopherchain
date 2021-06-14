@@ -1,7 +1,10 @@
 package chain
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -22,16 +25,22 @@ var (
 	genesisData = "The gopherchain is born"
 )
 
+// BlockChainIterator loops through the
+// Badger DB instance records
 type BlockChainIterator struct {
 	CurrentHash []byte
 	Datatbase   *badger.DB
 }
 
+// BlockChain struct implementation
+// of the connection between different chains
+// and how these chains link to the one before and after
 type BlockChain struct {
 	LastHash []byte
 	Database *badger.DB
 }
 
+// DBExists checks whether or not a db file exists on the system
 func DBExists() bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 		return false
@@ -39,6 +48,9 @@ func DBExists() bool {
 	return true
 }
 
+// ContinueBlockChain takes in a string address and returns a
+// pointer to the blockchain instance
+// the method adds a new address to the block chain
 func ContinueBlockChain(address string) *BlockChain {
 	if !DBExists() {
 		fmt.Println("No already existing gopherchain found, creating one")
@@ -66,7 +78,9 @@ func ContinueBlockChain(address string) *BlockChain {
 	return &chain
 }
 
-func (chain *BlockChain) FindUnspentTransactions(address string) []Transaction {
+// FindUnspentTransactions takes in a string address and returns an array
+// of transactions available to the provided address
+func (chain *BlockChain) FindUnspentTransactions(pubKeyHash []byte) []Transaction {
 	var unspentTxs []Transaction
 
 	spentTXOs := make(map[string][]int)
@@ -89,14 +103,14 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []Transaction {
 					}
 				}
 
-				if out.CanBeUnlocked(address) {
+				if out.IsLockedWithKey(pubKeyHash) {
 					unspentTxs = append(unspentTxs, *tx)
 				}
 			}
 
 			if !tx.IsCoinBase() {
 				for _, in := range tx.Inputs {
-					if in.CanUnlock(address) {
+					if in.UsesKey(pubKeyHash) {
 						inTxID := hex.EncodeToString(in.ID)
 						spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Out)
 					}
@@ -111,12 +125,14 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []Transaction {
 	return unspentTxs
 }
 
-func (chain *BlockChain) FindUTXO(address string) []TxOutput {
+// FindUTXO takes in a string address and returns an array of
+// transaction outputs
+func (chain *BlockChain) FindUTXO(pubKeyHash []byte) []TxOutput {
 	var UTXOs []TxOutput
-	unspentTransactions := chain.FindUnspentTransactions(address)
+	unspentTransactions := chain.FindUnspentTransactions(pubKeyHash)
 	for _, tx := range unspentTransactions {
 		for _, out := range tx.Outputs {
-			if out.CanBeUnlocked(address) {
+			if out.IsLockedWithKey(pubKeyHash) {
 				UTXOs = append(UTXOs, out)
 			}
 		}
@@ -124,9 +140,11 @@ func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	return UTXOs
 }
 
-func (chain *BlockChain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {
+// FindSpendableOutputs takes in a string address and n integer amount
+// then returns an accumulated amount and a slice of the spendable outputs
+func (chain *BlockChain) FindSpendableOutputs(pubKeyHash []byte, amount int) (int, map[string][]int) {
 	unspentOutputs := make(map[string][]int)
-	unspentTxs := chain.FindUnspentTransactions(address)
+	unspentTxs := chain.FindUnspentTransactions(pubKeyHash)
 	acumulated := 0
 
 Work:
@@ -134,7 +152,7 @@ Work:
 		txID := hex.EncodeToString(tx.ID)
 
 		for outIdx, out := range tx.Outputs {
-			if out.CanBeUnlocked(address) && acumulated < amount {
+			if out.IsLockedWithKey(pubKeyHash) && acumulated < amount {
 				unspentOutputs[txID] = append(unspentOutputs[txID], outIdx)
 
 				if acumulated > amount {
@@ -146,6 +164,9 @@ Work:
 	return acumulated, unspentOutputs
 }
 
+// InitBlockChain initialises the blockchain if
+// there is no db file on the current system.
+// Otherwise the system just shutsdown
 func InitBlockChain(address string) *BlockChain {
 	var lastHash []byte
 
@@ -174,6 +195,8 @@ func InitBlockChain(address string) *BlockChain {
 	return &blockchain
 }
 
+// AddBlock takes in a pointer of an array of transactions and adds them
+// to the badger DB data store
 func (chain *BlockChain) AddBlock(transactions []*Transaction) {
 	var lastHash []byte
 
@@ -204,11 +227,14 @@ func (chain *BlockChain) AddBlock(transactions []*Transaction) {
 	HandleErr(err)
 }
 
+// Iterator returns a blockchain iterrator instance
 func (chain *BlockChain) Iterator() *BlockChainIterator {
 	iter := &BlockChainIterator{chain.LastHash, chain.Database}
 	return iter
 }
 
+// Next gets the blockchain's iterator and returns a block
+// pointer instance that is next in the sequence
 func (iter *BlockChainIterator) Next() *Block {
 	var block *Block
 	err := iter.Datatbase.View(func(txn *badger.Txn) error {
@@ -223,4 +249,34 @@ func (iter *BlockChainIterator) Next() *Block {
 	HandleErr(err)
 	iter.CurrentHash = block.PrevHash
 	return block
+}
+
+func (bc *BlockChain) FindTransaction(id []byte) (Transaction, error) {
+	iter := bc.Iterator()
+
+	for {
+		block := iter.Next()
+		for _, tx := range block.Transactions {
+			if bytes.Equal(tx.ID, id) {
+				return *tx, nil
+			}
+		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+	return Transaction{}, errors.New("Transaction doesn't exist")
+}
+
+func (bc *BlockChain) SignTransaction(tx *Transaction, privKey ecdsa.PrivateKey) {
+	prevTXs := make(map[string]Transaction)
+
+	for _, in := range tx.Inputs {
+		prevTX, err := bc.FindTransaction(in.ID)
+		HandleErr(err)
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	}
+
+	tx.Sign(privKey, prevTXs)
 }

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"gopherchain/chain"
+	"gopherchain/wallet"
 	"log"
 	"os"
 	"runtime"
@@ -60,7 +61,9 @@ func (cli *CommandLine) getBalance(address string) {
 	defer myChain.Database.Close()
 
 	balance := 0
-	UTXOs := myChain.FindUTXO(address)
+	pubKeyHash := wallet.Base58Decode([]byte(address))
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+	UTXOs := myChain.FindUTXO(pubKeyHash)
 
 	for _, out := range UTXOs {
 		balance += out.Value

@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -19,6 +20,17 @@ const (
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
 	PublicKey  []byte
+}
+
+// ValidateAddress validates the characters used the address name
+// making sure they conform to the base58 encoding scheme
+func ValidateAddress(address string) bool {
+	pubKeyHash := Base58Decode([]byte(address))
+	actualCheckSum := pubKeyHash[len(pubKeyHash)-checksumLength:]
+	version := pubKeyHash[0]
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-checksumLength]
+	targetCheckSum := Checksum(append([]byte{version}, pubKeyHash...))
+	return bytes.Equal(actualCheckSum, targetCheckSum)
 }
 
 // Checksum creates a sha256 cryptographic cipher
