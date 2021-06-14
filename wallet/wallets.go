@@ -26,6 +26,17 @@ type Wallets struct {
 	Wallets map[string]*Wallet
 }
 
+// CreateWallets
+func CreateWallets() (*Wallets, error) {
+	wallets := Wallets{}
+	wallets.Wallets = make(map[string]*Wallet)
+
+	err := wallets.LoadFile()
+
+	return &wallets, err
+}
+
+// AddWallet
 func (ws *Wallets) AddWallet() string {
 	wallet := MakeWallet()
 	address := fmt.Sprintf("%s", wallet.Address())

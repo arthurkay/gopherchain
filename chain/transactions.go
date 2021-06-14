@@ -2,10 +2,13 @@ package chain
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"gopherchain/wallet"
 	"log"
 )
 
@@ -19,16 +22,24 @@ type Transaction struct {
 // TxOuput lays out the
 // out going transaction data
 type TxOutput struct {
-	Value  int
-	PubKey string
+	Value      int
+	PubKeyHash []byte
 }
 
 // TxInput is an object of the
 // incoming transaction details
 type TxInput struct {
-	ID  []byte
-	Out int
-	Sig string
+	ID        []byte
+	Out       int
+	Signature []byte
+	PubKey    []byte
+}
+
+// NewTXOutput
+func NewTXOutput(value int, address string) *TxOutput {
+	txo := &TxOutput{value, nil}
+	txo.Lock([]byte(address))
+	return txo
 }
 
 // Serialize creates and serialises byte data
@@ -53,7 +64,6 @@ func (tx *Transaction) Hash() []byte {
 	return hash[:]
 }
 
-/*
 // TrimmedCopy creates a trimmed transaction
 func (tx *Transaction) TrimmedCopy() Transaction {
 	var inputs []TxInput
@@ -71,6 +81,7 @@ func (tx *Transaction) TrimmedCopy() Transaction {
 	return txCopy
 }
 
+/*
 // Verify takes in a slice of string|transaction and returns a bool
 // whether or not the application has verified the tranasaction
 func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
@@ -114,6 +125,7 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	}
 	return true
 }
+*/
 
 // Sign takes in a privatekey and a slice of string|transactions then signs the transaction
 func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
@@ -143,6 +155,7 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 	}
 }
 
+/*
 // NewTXOutput takse in an integer, and string for address, then
 // returns a pointer to a TxOutput
 func NewTXOutput(value int, address string) *TxOutput {
@@ -171,10 +184,10 @@ func CoinBaseTx(to, data string) *Transaction {
 		data = fmt.Sprintf("Coin to %s", to)
 	}
 
-	txin := TxInput{[]byte{}, -1, data}
-	txout := TxOutput{100, to}
+	txin := TxInput{[]byte{}, -1, nil, []byte(data)}
+	txout := NewTXOutput(100, to)
 
-	tx := Transaction{nil, []TxInput{txin}, []TxOutput{txout}}
+	tx := Transaction{nil, []TxInput{txin}, []TxOutput{*txout}}
 	tx.SetID()
 
 	return &tx
@@ -185,7 +198,6 @@ func (tx *Transaction) IsCoinBase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].ID) == 0 && tx.Inputs[0].Out == -1
 }
 
-/*
 func (in *TxInput) UsesKey(pubKeyHash []byte) bool {
 	lockingHash := wallet.PublicKeyHash(in.PubKey)
 	return bytes.Compare(lockingHash, pubKeyHash) == 0
@@ -199,21 +211,26 @@ func (out *TxOutput) Lock(address []byte) {
 
 func (out *TxOutput) IsLockedWithKey(pubKeyHash []byte) bool {
 	return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
-} */
+}
 
-func (in *TxInput) CanUnlock(data string) bool {
-	return in.Sig == data
+/* func (in *TxInput) CanUnlock(data string) bool {
+	return in.Sigature == data
 }
 
 func (out *TxOutput) CanBeUnlocked(data string) bool {
 	return out.PubKey == data
-}
+} */
 
 func NewTransaction(from, to string, amount int, chain *BlockChain) *Transaction {
 	var inputs []TxInput
 	var outputs []TxOutput
 
-	acc, validOutputs := chain.FindSpendableOutputs(from, amount)
+	wallets, err := wallet.CreateWallets()
+	HandleErr(err)
+	w := wallets.GetWallet(from)
+	pubKeyHash := wallet.PublicKeyHash(w.PublicKey)
+
+	acc, validOutputs := chain.FindSpendableOutputs(pubKeyHash, amount)
 
 	if acc < amount {
 		panic("Error: not enough funds")
@@ -224,18 +241,19 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) *Transaction
 		HandleErr(err)
 
 		for _, out := range outs {
-			input := TxInput{txID, out, from}
+			input := TxInput{txID, out, nil, w.PublicKey}
 			inputs = append(inputs, input)
 		}
 	}
 
-	outputs = append(outputs, TxOutput{amount, to})
+	outputs = append(outputs, *NewTXOutput(amount, to))
 
 	if acc > amount {
-		outputs = append(outputs, TxOutput{acc - amount, from})
+		outputs = append(outputs, *NewTXOutput(acc-amount, from))
 	}
 
 	tx := Transaction{nil, inputs, outputs}
-	tx.SetID()
+	tx.ID = tx.Hash()
+	chain.SignTransaction(&tx, w.PrivateKey)
 	return &tx
 }
