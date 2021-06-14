@@ -22,16 +22,22 @@ var (
 	genesisData = "The gopherchain is born"
 )
 
+// BlockChainIterator loops through the
+// Badger DB instance records
 type BlockChainIterator struct {
 	CurrentHash []byte
 	Datatbase   *badger.DB
 }
 
+// BlockChain struct implementation
+// of the connection between different chains
+// and how these chains link to the one before and after
 type BlockChain struct {
 	LastHash []byte
 	Database *badger.DB
 }
 
+// DBExists checks whether or not a db file exists on the system
 func DBExists() bool {
 	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
 		return false
@@ -39,6 +45,9 @@ func DBExists() bool {
 	return true
 }
 
+// ContinueBlockChain takes in a string address and returns a
+// pointer to the blockchain instance
+// the method adds a new address to the block chain
 func ContinueBlockChain(address string) *BlockChain {
 	if !DBExists() {
 		fmt.Println("No already existing gopherchain found, creating one")
@@ -66,6 +75,8 @@ func ContinueBlockChain(address string) *BlockChain {
 	return &chain
 }
 
+// FindUnspentTransactions takes in a string address and returns an array
+// of transactions available to the provided address
 func (chain *BlockChain) FindUnspentTransactions(address string) []Transaction {
 	var unspentTxs []Transaction
 
@@ -111,6 +122,8 @@ func (chain *BlockChain) FindUnspentTransactions(address string) []Transaction {
 	return unspentTxs
 }
 
+// FindUTXO takes in a string address and returns an array of
+// transaction outputs
 func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	var UTXOs []TxOutput
 	unspentTransactions := chain.FindUnspentTransactions(address)
@@ -124,6 +137,8 @@ func (chain *BlockChain) FindUTXO(address string) []TxOutput {
 	return UTXOs
 }
 
+// FindSpendableOutputs takes in a string address and n integer amount
+// then returns an accumulated amount and a slice of the spendable outputs
 func (chain *BlockChain) FindSpendableOutputs(address string, amount int) (int, map[string][]int) {
 	unspentOutputs := make(map[string][]int)
 	unspentTxs := chain.FindUnspentTransactions(address)
@@ -146,6 +161,9 @@ Work:
 	return acumulated, unspentOutputs
 }
 
+// InitBlockChain initialises the blockchain if
+// there is no db file on the current system.
+// Otherwise the system just shutsdown
 func InitBlockChain(address string) *BlockChain {
 	var lastHash []byte
 
@@ -174,6 +192,8 @@ func InitBlockChain(address string) *BlockChain {
 	return &blockchain
 }
 
+// AddBlock takes in a pointer of an array of transactions and adds them
+// to the badger DB data store
 func (chain *BlockChain) AddBlock(transactions []*Transaction) {
 	var lastHash []byte
 
@@ -204,11 +224,14 @@ func (chain *BlockChain) AddBlock(transactions []*Transaction) {
 	HandleErr(err)
 }
 
+// Iterator returns a blockchain iterrator instance
 func (chain *BlockChain) Iterator() *BlockChainIterator {
 	iter := &BlockChainIterator{chain.LastHash, chain.Database}
 	return iter
 }
 
+// Next gets the blockchain's iterator and returns a block
+// pointer instance that is next in the sequence
 func (iter *BlockChainIterator) Next() *Block {
 	var block *Block
 	err := iter.Datatbase.View(func(txn *badger.Txn) error {
