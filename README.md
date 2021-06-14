@@ -1,3 +1,6 @@
+[![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/arthurkay/gopherchain/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/arthurkay/gopherchain)](https://goreportcard.com/report/github.com/arthurkay/gopherchain)
+
 # BlockChain (Purely written in GO)
 
 >Inspired by Tensor Programming - Updated for the current badger DB V3
