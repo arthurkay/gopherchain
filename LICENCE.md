@@ -1,4 +1,4 @@
-              2021 Arthur Kalikiti & Crispin Kalikiti
+                     Arthur Kalikiti (c) 2021
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
