@@ -58,7 +58,6 @@ func (cli *CommandLine) listAddresses() {
 
 	for _, address := range addresses {
 		fmt.Println(address)
-		fmt.Println("End of addresses")
 	}
 }
 

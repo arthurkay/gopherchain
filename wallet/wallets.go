@@ -92,4 +92,9 @@ func (ws *Wallets) SaveFile() {
 	if err != nil {
 		log.Panic(err)
 	}
+
+	er := ioutil.WriteFile(walletFile, content.Bytes(), 0644)
+	if err != nil {
+		panic(er)
+	}
 }
