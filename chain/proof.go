@@ -10,13 +10,13 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/joho/godotenv"
+	"github.com/arthurkay/env"
 )
 
 var Difficulty int
 
 func init() {
-	godotenv.Load()
+	env.Load()
 	level, err := strconv.Atoi(os.Getenv("DIFFICULTY"))
 	HandleErr(err)
 	Difficulty = level

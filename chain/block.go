@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"log"
 )
 
 type Block struct {
@@ -15,7 +16,7 @@ type Block struct {
 
 func HandleErr(err error) {
 	if err != nil {
-		panic(err.Error())
+		log.Panic(err)
 	}
 }
 

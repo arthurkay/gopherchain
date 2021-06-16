@@ -6,15 +6,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"gopherchain/utils"
 	"os"
 	"runtime"
 
+	"github.com/arthurkay/env"
 	"github.com/dgraph-io/badger/v3"
-	"github.com/joho/godotenv"
 )
 
 func init() {
-	godotenv.Load()
+	env.Load()
 	dbPath = os.Getenv("DB_PATH")
 	dbFile = os.Getenv("DB_FILE")
 }
@@ -53,7 +54,8 @@ func DBExists() bool {
 // the method adds a new address to the block chain
 func ContinueBlockChain(address string) *BlockChain {
 	if !DBExists() {
-		fmt.Println("No already existing gopherchain found, creating one")
+		fmt.Println("No already existing gopherchain found.")
+		fmt.Printf("Consider creating one with \"%s createblockchain\"", os.Args[0])
 		runtime.Goexit()
 	}
 
@@ -67,6 +69,7 @@ func ContinueBlockChain(address string) *BlockChain {
 		item, err := txn.Get([]byte("lh"))
 		HandleErr(err)
 		err = item.Value(func(val []byte) error {
+			utils.Logger(address)
 			lastHash = append([]byte{}, val...)
 			return nil
 		})

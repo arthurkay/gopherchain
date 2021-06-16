@@ -15,13 +15,12 @@ type CommandLine struct{}
 
 func (cli *CommandLine) printUsage() {
 	fmt.Println("Usage: ")
-	fmt.Println(" balance --address ADDRESS get the account balance")
-	fmt.Println(" createblockchain --address ADDRES creates a blockchain")
-	fmt.Println(" add --block BLOCK_DATA - Adds a block to the blockchain")
+	fmt.Println(" balance --addr ADDRESS get the account balance")
+	fmt.Println(" createblockchain --addr ADDRESS creates a blockchain")
 	fmt.Println(" print - Prints the blocks in the chain")
 	fmt.Println(" send --from FROM --to TO --amount AMOUNT Send money from FROM to TO")
-	fmt.Println(" create-wallet - Creates a new wallet")
-	fmt.Println(" list-addresses - Lists the addresses in our wallet file")
+	fmt.Println(" new-wallet - Creates a new wallet")
+	fmt.Println(" list-addr - Lists the addresses in our wallet file")
 }
 
 func (cli *CommandLine) printChain() {
@@ -92,6 +91,15 @@ func (cli *CommandLine) getBalance(address string) {
 }
 
 func (cli *CommandLine) send(from, to string, amount int) {
+	if !wallet.ValidateAddress(to) {
+		log.Panic("Address not valid")
+	}
+
+	if !wallet.ValidateAddress(from) {
+		log.Panic("Address not valid")
+	}
+
+	log.Printf("Sending %d to %s", amount, to)
 	myChain := chain.ContinueBlockChain(from)
 	defer myChain.Database.Close()
 
@@ -109,8 +117,8 @@ func (cli *CommandLine) Run() {
 	listAddressesCmd := flag.NewFlagSet("list-addresses", flag.ExitOnError)
 	createWalletCmd := flag.NewFlagSet("create-wallet", flag.ExitOnError)
 
-	getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
-	createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
+	getBalanceAddress := getBalanceCmd.String("addr", "", "The address to get balance for")
+	createBlockchainAddress := createBlockchainCmd.String("addr", "", "The address to send genesis block reward to")
 	sendFrom := sendCmd.String("from", "", "Source wallet address")
 	sendTo := sendCmd.String("to", "", "Destination wallet address")
 	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
@@ -138,13 +146,13 @@ func (cli *CommandLine) Run() {
 			log.Panic(err)
 		}
 
-	case "list-addresses":
+	case "list-addr":
 		err := listAddressesCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)
 		}
 
-	case "create-wallet":
+	case "new-wallet":
 		err := createWalletCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Panic(err)

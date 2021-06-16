@@ -8,8 +8,10 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"gopherchain/utils"
 	"gopherchain/wallet"
 	"log"
+	"os"
 )
 
 // Transaction a layout of the transaction structure
@@ -200,7 +202,7 @@ func (tx *Transaction) IsCoinBase() bool {
 
 func (in *TxInput) UsesKey(pubKeyHash []byte) bool {
 	lockingHash := wallet.PublicKeyHash(in.PubKey)
-	return bytes.Compare(lockingHash, pubKeyHash) == 0
+	return bytes.Equal(lockingHash, pubKeyHash)
 }
 
 func (out *TxOutput) Lock(address []byte) {
@@ -210,7 +212,7 @@ func (out *TxOutput) Lock(address []byte) {
 }
 
 func (out *TxOutput) IsLockedWithKey(pubKeyHash []byte) bool {
-	return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
+	return bytes.Equal(out.PubKeyHash, pubKeyHash)
 }
 
 /* func (in *TxInput) CanUnlock(data string) bool {
@@ -233,7 +235,8 @@ func NewTransaction(from, to string, amount int, chain *BlockChain) *Transaction
 	acc, validOutputs := chain.FindSpendableOutputs(pubKeyHash, amount)
 
 	if acc < amount {
-		panic("Error: not enough funds")
+		utils.Print("Error: not enough funds")
+		os.Exit(1)
 	}
 
 	for txid, outs := range validOutputs {

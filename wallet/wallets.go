@@ -8,14 +8,15 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 
-	"github.com/joho/godotenv"
+	"github.com/arthurkay/env"
 )
 
 var walletFile string
 
 func init() {
-	godotenv.Load()
+	env.Load()
 	walletFile = os.Getenv("WALLET_DATA")
 }
 
@@ -93,8 +94,14 @@ func (ws *Wallets) SaveFile() {
 		log.Panic(err)
 	}
 
-	er := ioutil.WriteFile(walletFile, content.Bytes(), 0644)
-	if err != nil {
-		panic(er)
+	_, er := os.Stat(walletFile)
+	if os.IsNotExist(er) {
+		dir := path.Dir(walletFile)
+		os.Mkdir(dir, 0755)
+	}
+
+	erro := os.WriteFile(walletFile, content.Bytes(), 0644)
+	if erro != nil {
+		panic(erro)
 	}
 }
